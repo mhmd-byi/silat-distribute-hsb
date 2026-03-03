@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Always allow NextAuth API routes and the login page through
@@ -33,7 +33,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Run middleware on all routes except Next.js internals and static files.
+     * Run on all routes except Next.js internals and static files.
      */
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
