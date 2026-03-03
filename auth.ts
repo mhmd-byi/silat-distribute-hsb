@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/mongodb";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,                          // ← required for Vercel / any non-localhost host
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -64,5 +66,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   pages: { signIn: "/login" },
-  secret: process.env.NEXTAUTH_SECRET,
 });
