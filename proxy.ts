@@ -21,10 +21,8 @@ export async function proxy(req: NextRequest) {
   });
 
   if (!token) {
-    // Not authenticated — redirect to /login
-    const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("callbackUrl", req.url);
-    return NextResponse.redirect(loginUrl);
+    // Not authenticated — redirect to /login (no callbackUrl to avoid encoding issues)
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   return NextResponse.next();
