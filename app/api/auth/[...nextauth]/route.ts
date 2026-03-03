@@ -1,3 +1,2 @@
-import { handlers } from "@/auth";
-
-export const { GET, POST } = handlers;
+// NextAuth route removed. Auth handled by /api/auth/login, /api/auth/logout, /api/auth/session
+export {};

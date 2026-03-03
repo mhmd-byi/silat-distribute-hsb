@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -22,29 +19,34 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      login,
-      password,
-      redirect: false,
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login, password }),
+      });
 
-    setLoading(false);
+      const data = await res.json();
 
-    if (result?.error) {
-      setError("Invalid username/email or password. Please try again.");
-    } else {
-      router.push("/");
+      if (!res.ok) {
+        setError(data.error ?? "Invalid username/email or password.");
+      } else {
+        // Full page reload so proxy reads the new cookie
+        window.location.href = "/";
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
-      {/* Subtle decorative circles */}
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-100 rounded-full translate-y-1/2 -translate-x-1/2 opacity-50 blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-sm">
-        {/* Brand mark */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
           <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-md">
             <ShieldCheck className="w-5 h-5 text-white" />
@@ -62,7 +64,6 @@ export default function LoginPage() {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Username / Email */}
               <div className="space-y-1.5">
                 <label htmlFor="login" className="text-sm font-medium text-foreground">
                   Username or Email
@@ -79,7 +80,6 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Password */}
               <div className="space-y-1.5">
                 <label htmlFor="password" className="text-sm font-medium text-foreground">
                   Password
@@ -99,16 +99,12 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword
-                      ? <EyeOff className="w-4 h-4" />
-                      : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              {/* Error */}
               {error && (
                 <div
                   className={cn(
@@ -123,7 +119,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Submit */}
               <Button
                 id="login-submit"
                 type="submit"

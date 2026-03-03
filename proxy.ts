@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { jwtVerify } from "jose";
+
+const secret = new TextEncoder().encode(
+  process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "hsb-fallback-secret"
+);
+const COOKIE_NAME = "hsb-session";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Always allow NextAuth API routes and the login page through
+  // Always allow the login page and auth API routes
   if (
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/login") ||
@@ -14,25 +19,21 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for a valid JWT session token
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
-  });
+  const token = req.cookies.get(COOKIE_NAME)?.value;
 
   if (!token) {
-    // Not authenticated — redirect to /login (no callbackUrl to avoid encoding issues)
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  return NextResponse.next();
+  try {
+    await jwtVerify(token, secret);
+    return NextResponse.next();
+  } catch {
+    // Token invalid or expired — redirect to login
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Run on all routes except Next.js internals and static files.
-     */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

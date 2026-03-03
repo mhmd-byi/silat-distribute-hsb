@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/mongodb";
-import { auth } from "@/auth";
+import { getSession } from "@/lib/auth-helpers";
 
-// ── GET /api/users — list all users (admin only) ──────────────────────────────
 export async function GET() {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getSession();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const client = await clientPromise;
   const db = client.db();
@@ -29,32 +28,26 @@ export async function GET() {
   });
 }
 
-// ── POST /api/users — create a new user (admin only) ─────────────────────────
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getSession();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
   const { username, email, password, role } = body as {
-    username: string;
-    email: string;
-    password: string;
-    role: string;
+    username: string; email: string; password: string; role: string;
   };
 
   if (!username?.trim() || !email?.trim() || !password?.trim()) {
     return NextResponse.json({ error: "Username, email, and password are required" }, { status: 400 });
   }
 
-  const allowedRoles = ["admin", "user"];
-  const assignedRole = allowedRoles.includes(role) ? role : "user";
+  const assignedRole = ["admin", "user"].includes(role) ? role : "user";
 
   const client = await clientPromise;
   const db = client.db();
   const col = db.collection("users");
 
-  // Check for duplicates
   const existing = await col.findOne({
     $or: [{ username: username.trim() }, { email: email.trim().toLowerCase() }],
   });
@@ -70,14 +63,13 @@ export async function POST(req: NextRequest) {
     password: hashedPassword,
     role: assignedRole,
     createdAt: new Date(),
-    createdBy: session.user.name,
+    createdBy: user.username,
   });
 
   return NextResponse.json({
     success: true,
     id: result.insertedId.toString(),
     username: username.trim(),
-    email: email.trim().toLowerCase(),
     role: assignedRole,
   });
 }
