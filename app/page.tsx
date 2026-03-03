@@ -3,7 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef } from "react";
 import {
-  Search, LogOut, LayoutGrid, User, ShieldCheck, Loader2, X, Check,
+  Search, LogOut, LayoutGrid, ShieldCheck, Loader2, X, Check, Users,
 } from "lucide-react";
 
 function CheckIcon() {
@@ -31,6 +31,8 @@ interface Mumineen {
   shortAddress: string;
   mobileNo: string;
   silatGiven: boolean;
+  silatGivenBy: string | null;
+  silatGivenAt: string | null;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -79,9 +81,18 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`/api/mumineen/${id}`, { method: "PATCH" });
       if (!res.ok) throw new Error("Failed");
-      // Optimistic update — flip the flag locally
+      // Optimistic update — flip the flag locally with who marked it
       setRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, silatGiven: true } : r))
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                silatGiven: true,
+                silatGivenBy: session?.user?.name ?? null,
+                silatGivenAt: new Date().toISOString(),
+              }
+            : r
+        )
       );
     } catch {
       // silent — user can retry
@@ -128,7 +139,12 @@ export default function DashboardPage() {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           <NavItem icon={<LayoutGrid className="size-4" />} label="Mumineen" active />
-          <NavItem icon={<User className="size-4" />} label="Profile" />
+          <a
+            href="/users"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <Users className="size-4" /> Users
+          </a>
         </nav>
 
         {/* User footer */}
@@ -139,7 +155,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-foreground truncate">{session?.user?.name}</p>
-              <p className="text-xs text-muted-foreground">Admin</p>
+              <p className="text-xs text-muted-foreground capitalize">{session?.user?.role ?? "user"}</p>
             </div>
             <Button
               id="signout-btn"
@@ -348,13 +364,20 @@ export default function DashboardPage() {
                       {/* ── Action ── */}
                       <TableCell>
                         {r.silatGiven ? (
-                          <Badge
-                            className="bg-green-50 text-green-700 border-green-200 font-semibold text-xs gap-1"
-                            variant="outline"
-                          >
-                            <CheckIcon />
-                            Given
-                          </Badge>
+                          <div className="space-y-0.5">
+                            <Badge
+                              className="bg-green-50 text-green-700 border-green-200 font-semibold text-xs gap-1"
+                              variant="outline"
+                            >
+                              <CheckIcon />
+                              Given
+                            </Badge>
+                            {r.silatGivenBy && (
+                              <p className="text-[10px] text-muted-foreground leading-none">
+                                by {r.silatGivenBy}
+                              </p>
+                            )}
+                          </div>
                         ) : (
                           <Button
                             size="sm"

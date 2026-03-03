@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
         shortAddress: doc["Short Address"] ?? "",
         mobileNo: doc["Mobile No"] ?? "",
         silatGiven: doc["silat_given"] === true,
+        silatGivenBy: doc["silat_given_by"] ?? null,
+        silatGivenAt: doc["silat_given_at"] ?? null,
       })),
       total,
       page,

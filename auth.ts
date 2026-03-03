@@ -12,9 +12,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.login || !credentials?.password) {
-          return null;
-        }
+        if (!credentials?.login || !credentials?.password) return null;
 
         const client = await clientPromise;
         const db = client.db();
@@ -28,35 +26,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           ],
         });
 
-        if (!user) {
-          return null;
-        }
+        if (!user) return null;
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password as string,
           user.password as string
         );
 
-        if (!isPasswordValid) {
-          return null;
-        }
+        if (!isPasswordValid) return null;
 
         return {
           id: user._id.toString(),
           email: user.email as string,
           name: user.username as string,
+          role: (user.role as string) ?? "user",
         };
       },
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
+  session: { strategy: "jwt" },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.name = user.name;
+        token.role = user.role;
       }
       return token;
     },
@@ -64,12 +58,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.name = token.name as string;
+        session.user.role = token.role as string;
       }
       return session;
     },
   },
-  pages: {
-    signIn: "/login",
-  },
+  pages: { signIn: "/login" },
   secret: process.env.NEXTAUTH_SECRET,
 });
