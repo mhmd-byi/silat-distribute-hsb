@@ -30,6 +30,7 @@ interface Mumineen {
   silatGiven: boolean;
   silatGivenBy: string | null;
   silatGivenAt: string | null;
+  silatRecipient: string | null;
 }
 
 export default function DashboardPage() {
@@ -43,6 +44,8 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [givingId, setGivingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [recipientName, setRecipientName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function doSearch(sabilVal: string) {
@@ -66,15 +69,27 @@ export default function DashboardPage() {
     }
   }
 
-  async function markAsGiven(id: string) {
+  async function markAsGiven(id: string, recipient: string) {
     setGivingId(id);
+    setEditingId(null);
+    setRecipientName("");
     try {
-      const res = await fetch(`/api/mumineen/${id}`, { method: "PATCH" });
+      const res = await fetch(`/api/mumineen/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receivedBy: recipient }),
+      });
       if (!res.ok) throw new Error("Failed");
       setRows((prev) =>
         prev.map((r) =>
           r.id === id
-            ? { ...r, silatGiven: true, silatGivenBy: user?.username ?? null, silatGivenAt: new Date().toISOString() }
+            ? {
+                ...r,
+                silatGiven: true,
+                silatGivenBy: user?.username ?? null,
+                silatGivenAt: new Date().toISOString(),
+                silatRecipient: recipient,
+              }
             : r
         )
       );
@@ -267,13 +282,49 @@ export default function DashboardPage() {
                             <Badge className="bg-green-50 text-green-700 border-green-200 font-semibold text-xs gap-1" variant="outline">
                               <CheckIcon /> Given
                             </Badge>
-                            {r.silatGivenBy && (
-                              <p className="text-[10px] text-muted-foreground leading-none">by {r.silatGivenBy}</p>
+                            {r.silatRecipient && (
+                              <p className="text-[10px] text-foreground/80 font-medium leading-none">to: {r.silatRecipient}</p>
                             )}
+                            {r.silatGivenBy && (
+                              <p className="text-[10px] text-muted-foreground leading-none">by: {r.silatGivenBy}</p>
+                            )}
+                          </div>
+                        ) : editingId === r.id ? (
+                          // Inline recipient name form
+                          <div className="flex items-center gap-1">
+                            <Input
+                              autoFocus
+                              placeholder="Recipient name"
+                              value={recipientName}
+                              onChange={(e) => setRecipientName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && recipientName.trim()) markAsGiven(r.id, recipientName.trim());
+                                if (e.key === "Escape") { setEditingId(null); setRecipientName(""); }
+                              }}
+                              className="h-7 text-xs w-36"
+                            />
+                            <Button
+                              size="sm"
+                              className="h-7 w-7 p-0 shrink-0"
+                              disabled={!recipientName.trim()}
+                              title="Confirm"
+                              onClick={() => markAsGiven(r.id, recipientName.trim())}
+                            >
+                              <Check className="size-3" />
+                            </Button>
+                            <Button
+                              size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+                              title="Cancel"
+                              onClick={() => { setEditingId(null); setRecipientName(""); }}
+                            >
+                              <X className="size-3" />
+                            </Button>
                           </div>
                         ) : (
                           <Button size="sm" className="h-7 text-xs px-3 font-semibold"
-                            disabled={givingId === r.id} onClick={() => markAsGiven(r.id)}>
+                            disabled={givingId === r.id}
+                            onClick={() => { setEditingId(r.id); setRecipientName(""); }}>
                             {givingId === r.id ? <Loader2 className="size-3 animate-spin" /> : null}
                             Silat Given
                           </Button>

@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
         silatGiven: doc["silat_given"] === true,
         silatGivenBy: doc["silat_given_by"] ?? null,
         silatGivenAt: doc["silat_given_at"] ?? null,
+        silatRecipient: doc["silat_given_recipient"] ?? null,
       })),
       total,
       page,
